@@ -1,0 +1,6 @@
+{
+  "name": "NEXUS — Cinéma, Séries & Anime",
+  "description": "Votre centre personnel de suivi précis et d'accès légal pour vos films, séries et anime japonais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

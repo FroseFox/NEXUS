@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "UserLibraryItem": {
+      "title": "UserLibraryItem",
+      "description": "Suivi personnel d'un film, d'une série ou d'un anime dans la bibliothèque d'un utilisateur.",
+      "type": "object",
+      "properties": {
+        "mediaId": {
+          "type": "string",
+          "description": "Identifiant unique de l'œuvre suivie.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID Firebase de l'utilisateur propriétaire.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "description": "Catégorie stricte de l'œuvre.",
+          "enum": ["film", "serie", "anime"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Titre principal de l'œuvre pour affichage hors-ligne.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "posterUrl": {
+          "type": "string",
+          "description": "URL ou chemin de l'affiche de l'œuvre.",
+          "maxLength": 500
+        },
+        "status": {
+          "type": "string",
+          "description": "Statut de progression de l'utilisateur.",
+          "enum": ["a_regarder", "en_cours", "termine", "en_pause", "abandonne"]
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "Indique si l'œuvre est marquée en favori."
+        },
+        "inWatchlist": {
+          "type": "boolean",
+          "description": "Indique si l'œuvre figure dans Ma liste."
+        },
+        "personalRating": {
+          "type": "number",
+          "description": "Note personnelle facultative de 0 (non noté) à 10."
+        },
+        "watchedDate": {
+          "type": "string",
+          "description": "Date de visionnage principal au format YYYY-MM-DD (ou chaîne vide).",
+          "maxLength": 32
+        },
+        "rewatchDates": {
+          "type": "array",
+          "description": "Historique des dates de revisionnage (borné à 50 entrées)."
+        },
+        "watchedEpisodes": {
+          "type": "array",
+          "description": "Liste des codes d'épisodes vus au format S1E1 (borné à 500 entrées)."
+        },
+        "lastWatchedEpisode": {
+          "type": "string",
+          "description": "Dernier épisode regardé (ex: S1E4).",
+          "maxLength": 32
+        },
+        "totalEpisodesCount": {
+          "type": "number",
+          "description": "Nombre total d'épisodes connus de l'œuvre."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Horodatage serveur de création."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Horodatage serveur de dernière mise à jour."
+        }
+      },
+      "required": [
+        "mediaId",
+        "userId",
+        "category",
+        "title",
+        "status",
+        "isFavorite",
+        "inWatchlist",
+        "watchedEpisodes",
+        "rewatchDates",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/library/{mediaId}": {
+      "schema": {
+        "$ref": "#/entities/UserLibraryItem"
+      },
+      "description": "Collection isolée par utilisateur contenant les œuvres suivies et leur progression."
+    }
+  }
+}

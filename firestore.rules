@@ -1,0 +1,141 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 3. Entity Validation Blueprint: UserLibraryItem
+    function isValidUserLibraryItem(data, userId, mediaId) {
+      return data.keys().hasAll([
+        'mediaId',
+        'userId',
+        'category',
+        'title',
+        'status',
+        'isFavorite',
+        'inWatchlist',
+        'watchedEpisodes',
+        'rewatchDates',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'mediaId',
+        'userId',
+        'category',
+        'title',
+        'posterUrl',
+        'status',
+        'isFavorite',
+        'inWatchlist',
+        'personalRating',
+        'watchedDate',
+        'rewatchDates',
+        'watchedEpisodes',
+        'lastWatchedEpisode',
+        'totalEpisodesCount',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+      data.userId == request.auth.uid && data.userId == userId &&
+      data.mediaId is string && data.mediaId.size() >= 1 && data.mediaId.size() <= 128 &&
+      data.mediaId.matches('^[a-zA-Z0-9_\\-]+$') && data.mediaId == mediaId &&
+      data.category is string && data.category.size() <= 16 &&
+      (data.category == 'film' || data.category == 'serie' || data.category == 'anime') &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+      (!('posterUrl' in data) || (data.posterUrl is string && data.posterUrl.size() <= 500)) &&
+      data.status is string && data.status.size() <= 32 &&
+      (data.status == 'a_regarder' || data.status == 'en_cours' || data.status == 'termine' || data.status == 'en_pause' || data.status == 'abandonne') &&
+      data.isFavorite is bool &&
+      data.inWatchlist is bool &&
+      (!('personalRating' in data) || (data.personalRating is number && data.personalRating >= 0 && data.personalRating <= 10)) &&
+      (!('watchedDate' in data) || (data.watchedDate is string && data.watchedDate.size() <= 32)) &&
+      data.rewatchDates is list && data.rewatchDates.size() <= 50 &&
+      (data.rewatchDates.size() == 0 || (data.rewatchDates[0] is string && data.rewatchDates[0].size() <= 32)) &&
+      data.watchedEpisodes is list && data.watchedEpisodes.size() <= 500 &&
+      (data.watchedEpisodes.size() == 0 || (data.watchedEpisodes[0] is string && data.watchedEpisodes[0].size() <= 32)) &&
+      (!('lastWatchedEpisode' in data) || (data.lastWatchedEpisode is string && data.lastWatchedEpisode.size() <= 32)) &&
+      (!('totalEpisodesCount' in data) || (data.totalEpisodesCount is number && data.totalEpisodesCount >= 0 && data.totalEpisodesCount <= 5000)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // 4. User Personal Library Collection
+    match /users/{userId}/library/{mediaId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(mediaId) && existing().userId == request.auth.uid;
+
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+      allow create: if isVerifiedUser() &&
+        isOwner(userId) &&
+        isValidId(userId) &&
+        isValidId(mediaId) &&
+        isValidUserLibraryItem(incoming(), userId, mediaId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isOwner(userId) &&
+        isValidId(userId) &&
+        isValidId(mediaId) &&
+        isValidUserLibraryItem(incoming(), userId, mediaId) &&
+        incoming().userId == existing().userId &&
+        incoming().mediaId == existing().mediaId &&
+        incoming().category == existing().category &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Action: Update tracking progress, status, rating, or metadata
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title',
+            'posterUrl',
+            'status',
+            'isFavorite',
+            'inWatchlist',
+            'personalRating',
+            'watchedDate',
+            'rewatchDates',
+            'watchedEpisodes',
+            'lastWatchedEpisode',
+            'totalEpisodesCount',
+            'updatedAt'
+          ])
+        );
+
+      allow delete: if isVerifiedUser() &&
+        isOwner(userId) &&
+        isValidId(userId) &&
+        isValidId(mediaId) &&
+        existing().userId == request.auth.uid;
+    }
+  }
+}
