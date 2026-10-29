@@ -23,14 +23,13 @@ jobs:
       - name: Récupération du code source
         uses: actions/checkout@v4
 
-      - name: Configuration de Node.js 20
+      - name: Configuration de Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
       - name: Installation des dépendances
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Compilation de l'application (Vite build)
         run: npm run build
